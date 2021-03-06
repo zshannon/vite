@@ -24,8 +24,25 @@ interface ImportMeta {
   }
 
   readonly env: ImportMetaEnv
-}
 
+  glob(
+    pattern: string
+  ): Record<
+    string,
+    () => Promise<{
+      [key: string]: any
+    }>
+  >
+
+  globEager(
+    pattern: string
+  ): Record<
+    string,
+    {
+      [key: string]: any
+    }
+  >
+}
 interface ImportMetaEnv {
   [key: string]: string | boolean | undefined
   BASE_URL: string
@@ -188,8 +205,12 @@ declare module '*?worker&inline' {
   export default workerConstructor
 }
 
-// glob import
-declare module 'glob:*' {
-  const modules: Record<string, Record<string, any>>
-  export default modules
+declare module '*?raw' {
+  const src: string
+  export default src
+}
+
+declare module '*?url' {
+  const src: string
+  export default src
 }

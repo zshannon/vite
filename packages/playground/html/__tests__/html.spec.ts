@@ -55,6 +55,12 @@ function testPage(isNested: boolean) {
     }
   })
 
+  test('body prepend/append transform', async () => {
+    expect(await page.innerHTML('body')).toMatch(
+      /prepended to body(.*)appended to body/s
+    )
+  })
+
   test('css', async () => {
     expect(await getColor('h1')).toBe(isNested ? 'red' : 'blue')
     expect(await getColor('p')).toBe('grey')
@@ -75,6 +81,15 @@ describe('nested', () => {
   beforeAll(async () => {
     // viteTestUrl is globally injected in scripts/jestPerTestSetup.ts
     await page.goto(viteTestUrl + '/nested/')
+  })
+
+  testPage(true)
+})
+
+describe('nested w/ query', () => {
+  beforeAll(async () => {
+    // viteTestUrl is globally injected in scripts/jestPerTestSetup.ts
+    await page.goto(viteTestUrl + '/nested/index.html?v=1')
   })
 
   testPage(true)

@@ -12,6 +12,8 @@ By default, this plugin will:
 
 - Inject `<script nomodule>` tags into generated HTML to conditionally load the polyfills and legacy bundle only in browsers without native ESM support.
 
+- Inject the `import.meta.env.LEGACY` env variable, which will only be `true` in the legacy production build, and `false` in all other cases. (requires `vite@^2.0.0-beta.69`)
+
 ## Usage
 
 ```js
@@ -43,11 +45,19 @@ export default {
 - **Type:** `boolean | string[]`
 - **Default:** `true`
 
-  By default, a polyfills chunks are generated based on the target browser ranges and actual usage in the final bundle (detected via `@babel/preset-env`'s `useBuiltIns: 'usage'`).
+  By default, a polyfills chunk is generated based on the target browser ranges and actual usage in the final bundle (detected via `@babel/preset-env`'s `useBuiltIns: 'usage'`).
 
   Set to a list of strings to explicitly control which polyfills to include. See [Polyfill Specifiers](#polyfill-specifiers) for details.
 
   Set to `false` to avoid generating polyfills and handle it yourself (will still generate legacy chunks with syntax transformations).
+
+### `additionalLegacyPolyfills`
+
+- **Type:** `string[]`
+
+  Add custom imports to the legacy polyfills chunk. Since the usage-based polyfill detection only covers ES language features, it may be necessary to manually specify additional DOM API polyfills using this option.
+
+  Note: if additional plyfills are needed for both the modern and legacy chunks, they can simply be imported in the application source code.
 
 ### `ignoreBrowserslistConfig`
 

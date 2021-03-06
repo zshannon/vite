@@ -40,7 +40,7 @@ export async function stopService() {
   }
 }
 
-export type EsbuildTransformResult = Omit<TransformResult, 'map'> & {
+export type ESBuildTransformResult = Omit<TransformResult, 'map'> & {
   map: SourceMap
 }
 
@@ -49,15 +49,21 @@ export async function transformWithEsbuild(
   filename: string,
   options?: TransformOptions,
   inMap?: object
-): Promise<EsbuildTransformResult> {
+): Promise<ESBuildTransformResult> {
   const service = await ensureService()
   // if the id ends with a valid ext, use it (e.g. vue blocks)
   // otherwise, cleanup the query before checking the ext
   const ext = path.extname(
     /\.\w+$/.test(filename) ? filename : cleanUrl(filename)
   )
+  
+  let loader = ext.slice(1)
+  if (loader === 'cjs' || loader === 'mjs') {
+    loader = 'js'
+  }
+  
   const resolvedOptions = {
-    loader: ext.slice(1) as Loader,
+    loader: loader as Loader,
     sourcemap: true,
     // ensure source file name contains full query
     sourcefile: filename,
@@ -115,7 +121,7 @@ export function esbuildPlugin(options: ESBuildOptions = {}): Plugin {
             this.warn(prettifyMessage(m, code))
           })
         }
-        if (options.jsxInject) {
+        if (options.jsxInject && /\.(?:j|t)sx\b/.test(id)) {
           result.code = options.jsxInject + ';' + result.code
         }
         return {

@@ -6,6 +6,7 @@ import {
   removeImportQuery,
   removeTimestampQuery
 } from '../utils'
+import { FS_PREFIX } from '../constants'
 import { TransformResult } from './transformRequest'
 import { PluginContainer } from './pluginContainer'
 import { parse as parseUrl } from 'url'
@@ -26,6 +27,8 @@ export class ModuleNode {
   acceptedHmrDeps = new Set<ModuleNode>()
   isSelfAccepting = false
   transformResult: TransformResult | null = null
+  ssrTransformResult: TransformResult | null = null
+  ssrModule: Record<string, any> | null = null
   lastHMRTimestamp = 0
 
   constructor(url: string) {
@@ -34,11 +37,19 @@ export class ModuleNode {
   }
 }
 
+function invalidateSSRModule(mod: ModuleNode, seen: Set<ModuleNode>) {
+  if (seen.has(mod)) {
+    return
+  }
+  seen.add(mod)
+  mod.ssrModule = null
+  mod.importers.forEach((importer) => invalidateSSRModule(importer, seen))
+}
 export class ModuleGraph {
-  private urlToModuleMap = new Map<string, ModuleNode>()
-  private idToModuleMap = new Map<string, ModuleNode>()
+  urlToModuleMap = new Map<string, ModuleNode>()
+  idToModuleMap = new Map<string, ModuleNode>()
   // a single file may corresponds to multiple modules with different queries
-  private fileToModulesMap = new Map<string, Set<ModuleNode>>()
+  fileToModulesMap = new Map<string, Set<ModuleNode>>()
   container: PluginContainer
 
   constructor(container: PluginContainer) {
@@ -61,10 +72,24 @@ export class ModuleGraph {
   onFileChange(file: string) {
     const mods = this.getModulesByFile(file)
     if (mods) {
+      const seen = new Set<ModuleNode>()
       mods.forEach((mod) => {
-        mod.transformResult = null
+        this.invalidateModule(mod, seen)
       })
     }
+  }
+
+  invalidateModule(mod: ModuleNode, seen: Set<ModuleNode> = new Set()) {
+    mod.transformResult = null
+    mod.ssrTransformResult = null
+    invalidateSSRModule(mod, seen)
+  }
+
+  invalidateAll() {
+    const seen = new Set<ModuleNode>()
+    this.idToModuleMap.forEach((mod) => {
+      this.invalidateModule(mod, seen)
+    })
   }
 
   /**
@@ -122,12 +147,12 @@ export class ModuleGraph {
       mod.id = resolvedId
       this.idToModuleMap.set(resolvedId, mod)
       const file = (mod.file = cleanUrl(resolvedId))
-      let fileMappedMdoules = this.fileToModulesMap.get(file)
-      if (!fileMappedMdoules) {
-        fileMappedMdoules = new Set()
-        this.fileToModulesMap.set(file, fileMappedMdoules)
+      let fileMappedModules = this.fileToModulesMap.get(file)
+      if (!fileMappedModules) {
+        fileMappedModules = new Set()
+        this.fileToModulesMap.set(file, fileMappedModules)
       }
-      fileMappedMdoules.add(mod)
+      fileMappedModules.add(mod)
     }
     return mod
   }
@@ -138,20 +163,20 @@ export class ModuleGraph {
   // hmr in the importing css file.
   createFileOnlyEntry(file: string) {
     file = normalizePath(file)
-    const url = `/@fs/${file}`
-    let fileMappedMdoules = this.fileToModulesMap.get(file)
-    if (!fileMappedMdoules) {
-      fileMappedMdoules = new Set()
-      this.fileToModulesMap.set(file, fileMappedMdoules)
+    const url = `${FS_PREFIX}${file}`
+    let fileMappedModules = this.fileToModulesMap.get(file)
+    if (!fileMappedModules) {
+      fileMappedModules = new Set()
+      this.fileToModulesMap.set(file, fileMappedModules)
     }
-    for (const m of fileMappedMdoules) {
+    for (const m of fileMappedModules) {
       if (m.url === url) {
         return m
       }
     }
     const mod = new ModuleNode(url)
     mod.file = file
-    fileMappedMdoules.add(mod)
+    fileMappedModules.add(mod)
     return mod
   }
 

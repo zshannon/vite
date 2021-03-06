@@ -13,6 +13,7 @@ export async function transformStyle(
   // vite already handles pre-processors and CSS module so this is only
   // applying SFC-specific transforms like scoped mode and CSS vars rewrite (v-bind(var))
   const result = await compileStyleAsync({
+    ...options.style,
     filename: descriptor.filename,
     id: `data-v-${descriptor.id}`,
     isProd: options.isProduction,
@@ -36,6 +37,6 @@ export async function transformStyle(
 
   return {
     code: result.code,
-    map: result.map as any
+    map: result.map || ({ mappings: '' } as any)
   }
 }

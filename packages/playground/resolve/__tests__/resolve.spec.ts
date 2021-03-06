@@ -1,3 +1,5 @@
+import { isBuild } from '../../testUtils'
+
 test('deep import', async () => {
   expect(await page.textContent('.deep-import')).toMatch('[2,4]')
 })
@@ -26,8 +28,18 @@ test('Respect exports field env key priority', async () => {
   expect(await page.textContent('.exports-env')).toMatch('[success]')
 })
 
-test('omitted index/*', async () => {
+test('Respect production/development conditionals', async () => {
+  expect(await page.textContent('.exports-env')).toMatch(
+    isBuild ? `browser.prod.mjs` : `browser.mjs`
+  )
+})
+
+test('implicit dir/index.js', async () => {
   expect(await page.textContent('.index')).toMatch('[success]')
+})
+
+test('implicit dir/index.js vs explicit file', async () => {
+  expect(await page.textContent('.dir-vs-file')).toMatch('[success]')
 })
 
 test('filename with dot', async () => {
@@ -52,4 +64,16 @@ test('plugin resolved virutal file', async () => {
 
 test('resolve inline package', async () => {
   expect(await page.textContent('.inline-pkg')).toMatch('[success]')
+})
+
+test('resolve.extensions', async () => {
+  expect(await page.textContent('.custom-ext')).toMatch('[success]')
+})
+
+test('resolve.mainFields', async () => {
+  expect(await page.textContent('.custom-main-fields')).toMatch('[success]')
+})
+
+test('resolve.conditions', async () => {
+  expect(await page.textContent('.custom-condition')).toMatch('[success]')
 })
